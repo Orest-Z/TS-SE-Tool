@@ -891,11 +891,15 @@ namespace TS_SE_Tool
 
                 IO_Utilities.ErrorLogWriter("Error during Writing save file" + Environment.NewLine + details);
 
-                MessageBox.Show("Something went wrong during Writing Save file." + Environment.NewLine +
-                                "The save file itself was NOT modified." + Environment.NewLine + Environment.NewLine +
-                                details + Environment.NewLine +
-                                "Full details were appended to errorlog.log",
-                                "Error during Writing save file", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string[] failedDialog = HelpTranslateDialogOrDefault("SaveWriteFailed",
+                    "Error during Writing save file",
+                    "Something went wrong during Writing Save file." + Environment.NewLine +
+                    "The save file itself was NOT modified." + Environment.NewLine + Environment.NewLine +
+                    "{0}" + Environment.NewLine +
+                    "Full details were appended to errorlog.log");
+
+                MessageBox.Show(string.Format(failedDialog[1], details), failedDialog[0],
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 return;
             }
@@ -907,9 +911,13 @@ namespace TS_SE_Tool
 
                 toolStripProgressBarMain.Value = 0;
 
-                MessageBox.Show("The save file on disk changed after it was loaded, so nothing was written." + Environment.NewLine +
-                                "Reload the save and redo your changes.",
-                                "Save file NOT written", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string[] skippedDialog = HelpTranslateDialogOrDefault("SaveNotWritten",
+                    "Save file NOT written",
+                    "The save file on disk changed after it was loaded, so nothing was written." + Environment.NewLine +
+                    "Reload the save and redo your changes.");
+
+                MessageBox.Show(skippedDialog[1], skippedDialog[0],
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
                 return;
             }
@@ -987,6 +995,21 @@ namespace TS_SE_Tool
 
         //Set by NewWrireSaveFile when it deliberately writes nothing.
         private bool SaveWriteSkipped = false;
+
+        /// <summary>
+        /// Caption and text for a dialog, falling back to the supplied English strings
+        /// when the active language pack does not carry the keys yet.
+        /// </summary>
+        private string[] HelpTranslateDialogOrDefault(string _dialogName, string _defaultCaption, string _defaultText)
+        {
+            string[] translated = HelpTranslateDialog(_dialogName);
+
+            return new string[]
+            {
+                string.IsNullOrEmpty(translated[0]) ? _defaultCaption : translated[0],
+                string.IsNullOrEmpty(translated[1]) ? _defaultText : Regex.Unescape(translated[1])
+            };
+        }
 
         /// <summary>
         /// Full exception detail - type, message, offending method and stack - for every
