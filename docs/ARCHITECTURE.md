@@ -47,6 +47,14 @@ Short orientation for future work sessions. Based on `upstream/dev-branch` (4402
 - `SII_Decrypt.dll` (2023) is unverified for 1.60+ binary saves (#149 reports `file_not_decoded`).
 - The only backups are single `*_backup.sii` files that are overwritten on every save.
 
+## Verified on a real ETS2 1.61 profile (2026-10-04)
+
+- `g_save_format 0` writes game/info/profile as `ScsC` (encrypted). Configs and saves edited by a tool are plain text.
+- **savefile version = 102** (info.sii `version:`). Not 97 like ATS 1.60.
+- The bundled `SII_Decrypt.dll` (2023, **32-bit/i386**, so the exe must run as x86/Prefer32Bit) decoded all 66 encrypted files to valid text: `SiiNunit` header, balanced units, no binary residue.
+- Unit types missing from `DetectTag`: `player_vehicles`, `car_job_generator`, `car_job_log` (cause of #144). `info.sii` has `dependencies` (121 entries, `dlc|`/`rdlc|`/`mod|<id>|<name>`).
+- About 27k units and about 6.6k `nil` values per save.
+
 ## Community forks studied (all Apache-2.0)
 
 - **danielrvieira `fix/savefile-v97`** (PR #147, on dev-branch): temp-file write, real exception surfacing, `catch → continue`, `nil`/uint raw fields, `OriginalBlockMerge` (re-applies original lines). Weakness: array entries that shrink survive from the original. Also adds a `--selftest` harness.
