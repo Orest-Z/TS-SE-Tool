@@ -63,18 +63,28 @@ namespace TS_SE_Tool.Diagnostics
 
             long? money = null;
             int level = -1;
+            string name = null;
 
             for (int i = 3; i < args.Length - 1; i++)
             {
                 if (args[i] == "--money") money = long.Parse(args[i + 1]);
                 if (args[i] == "--level") level = int.Parse(args[i + 1]);
+                if (args[i] == "--name") name = args[i + 1];
             }
 
             try
             {
                 Directory.CreateDirectory(target);
 
-                foreach (string file in Directory.GetFiles(source).Where(x => !x.EndsWith(SafeSaveWriter.TempSuffix)))
+                //No *_backup.sii: if the game rejected the new game.sii it could silently load the
+                //backup instead, and the in-game test would look like a pass.
+                foreach (string stale in Directory.GetFiles(target, "*_backup.sii"))
+                {
+                    File.SetAttributes(stale, FileAttributes.Normal);
+                    File.Delete(stale);
+                }
+
+                foreach (string file in Directory.GetFiles(source).Where(x => !x.EndsWith(SafeSaveWriter.TempSuffix) && !x.EndsWith("_backup.sii")))
                 {
                     string copy = Path.Combine(target, Path.GetFileName(file));
 
@@ -126,7 +136,7 @@ namespace TS_SE_Tool.Diagnostics
 
                 int expectedUnits = SafeSaveWriter.CountUnits(text);
 
-                SafeSaveWriter.WriteAll(new[]
+                var pending = new System.Collections.Generic.List<SafeSaveWriter.PendingFile>
                 {
                     new SafeSaveWriter.PendingFile
                     {
@@ -134,7 +144,22 @@ namespace TS_SE_Tool.Diagnostics
                         Content = text,
                         Validate = lines => SafeSaveWriter.CheckSiiStructure(lines, expectedUnits)
                     }
-                });
+                };
+
+                //display name in the game's Load menu
+                if (name != null)
+                {
+                    infoData.Name = new Save.DataFormat.SCS_String(name);
+
+                    pending.Add(new SafeSaveWriter.PendingFile
+                    {
+                        Path = Path.Combine(target, "info.sii"),
+                        Content = infoData.PrintOut(),
+                        Validate = lines => SafeSaveWriter.CheckSiiStructure(lines, -1)
+                    });
+                }
+
+                SafeSaveWriter.WriteAll(pending);
 
                 //read back exactly like a load
                 string[] reread = SelfTest.Decode(gamePath);
