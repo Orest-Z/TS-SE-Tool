@@ -10,7 +10,7 @@ This fork (`feature/ets2-1.61`) brings the tool to **ETS2 1.61** and makes load/
 
 | Game | Save file version | Status |
 |---|---|---|
-| ETS2 1.43 – 1.61 | 61 – 102 | Load + save verified lossless on real 1.61 saves (see *Tests*). |
+| ETS2 1.43 – 1.61 (all DLCs, ProMods 2.84 incl. Maghreb, Middle-East, Great Steppe) | 61 – 102 | Load + save verified lossless on real 1.61 saves (see *Tests*); edited save loads in game. Release notes: [docs/RELEASE_NOTES_1.61.0.md](docs/RELEASE_NOTES_1.61.0.md) |
 | ATS 1.43 – 1.60 | 61 – 97 | Same code path, not tested on a real ATS profile in this fork. |
 | Newer | > 102 | Loads after a warning. Unknown data is kept unchanged. Test on a copy first. |
 
