@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using TS_SE_Tool.Save.DataFormat;
@@ -29,6 +30,20 @@ namespace TS_SE_Tool.Save.Items
         //Used by OriginalBlockMerge so attributes this build does not know about
         //(newer savefile versions) survive a write.
         internal Dictionary<string, List<string>> OriginalBlockBodies = new Dictionary<string, List<string>>();
+
+        //Unit names in the order they appear in the save. The writer keeps this order.
+        internal List<string> OriginalBlockOrder = new List<string>();
+
+        //Unit types this build does not model but that current game versions are known to
+        //write. They are preserved verbatim like any unknown unit, but do not trigger the
+        //"unrecognised blocks" warning (#144).
+        internal static readonly HashSet<string> KnownPassthroughTypes = new HashSet<string>
+        {
+            "player_vehicles", "car_job_generator", "car_job_log"
+        };
+
+        //Unknown units whose type is not in KnownPassthroughTypes.
+        internal List<string> UnexpectedBlockTypes = new List<string>();
 
         internal Economy Economy
         {
@@ -65,34 +80,35 @@ namespace TS_SE_Tool.Save.Items
 
         internal SiiNunit(string[] _input)
         {
-            string tagLine = "", dataLine = "", nameless = "";
+            string tagLine = "", nameless = "";
 
             //block decoding
             for (int line = 0; line < _input.Length; line++)
             {
-                string currentLine = _input[line];
+                //Unit header "type : name {". A plain Contains(':') && Contains('{') test
+                //would also match an attribute whose string value contains a brace.
+                Match header = OriginalBlockMerge.BlockHeader.Match(_input[line].Trim());
 
-                if (currentLine.Contains(':') && currentLine.Contains('{'))
-                {
-                    string[] splittedLine = currentLine.Split(new char[] { ':', '{' }, 3);
-
-                    tagLine = splittedLine[0].Trim();
-                    dataLine = splittedLine[1].Trim();
-                }
-                else
-                {
+                if (!header.Success)
                     continue;
-                }
 
-                nameless = dataLine;
-
-                NamelessControlList.Add(nameless);
+                tagLine = header.Groups["tag"].Value;
+                nameless = header.Groups["name"].Value;
 
                 string[] blockLines = GetLines().ToArray();
 
+                if (SiiNitems.ContainsKey(nameless))
+                {
+                    //Never seen in game saves. Keep the first one and say so instead of throwing.
+                    Utilities.IO_Utilities.ErrorLogWriter("Save | Duplicate unit name ignored | " + tagLine + " : " + nameless);
+                    continue;
+                }
+
+                NamelessControlList.Add(nameless);
+                OriginalBlockOrder.Add(nameless);
+
                 //keep the body verbatim (header and closing brace excluded)
-                if (blockLines.Length > 2 && !OriginalBlockBodies.ContainsKey(nameless))
-                    OriginalBlockBodies.Add(nameless, blockLines.Skip(1).Take(blockLines.Length - 2).ToList());
+                OriginalBlockBodies.Add(nameless, blockLines.Skip(1).Take(Math.Max(0, blockLines.Length - 2)).ToList());
 
                 SiiNitems.Add(nameless, DetectTag(nameless, tagLine, blockLines));
 
@@ -101,7 +117,6 @@ namespace TS_SE_Tool.Save.Items
                 //===
                 List<string> GetLines()
                 {
-                    string workLine = "";
                     List<string> Data = new List<string>();
 
                     line--;
@@ -109,10 +124,9 @@ namespace TS_SE_Tool.Save.Items
                     do
                     {
                         line++;
-                        workLine = _input[line];
-                        Data.Add(workLine);
+                        Data.Add(_input[line]);
 
-                    } while (!_input[line].TrimStart().StartsWith("}"));
+                    } while (line < _input.Length - 1 && !_input[line].TrimStart().StartsWith("}"));
 
                     return Data;
                 }
@@ -415,8 +429,17 @@ namespace TS_SE_Tool.Save.Items
 
                         UnidentifiedBlocks.Add(nameless);
 
-                        Utilities.IO_Utilities.ErrorLogWriter("Save | New Data block | " + tagLine + Environment.NewLine +
-                            string.Join(Environment.NewLine, tmpNewBlockLines));
+                        if (KnownPassthroughTypes.Contains(tagLine))
+                        {
+                            Utilities.IO_Utilities.LogWriter("Save | Unit kept unchanged | " + tagLine + " : " + nameless);
+                        }
+                        else
+                        {
+                            UnexpectedBlockTypes.Add(tagLine);
+
+                            Utilities.IO_Utilities.ErrorLogWriter("Save | New Data block | " + tagLine + Environment.NewLine +
+                                string.Join(Environment.NewLine, tmpNewBlockLines));
+                        }
 
                         return new Unidentified(tmpNewBlockLines);
                     }
@@ -1021,7 +1044,7 @@ namespace TS_SE_Tool.Save.Items
             returnSB.Append("}");
 
             //Put back everything this build does not model - see OriginalBlockMerge.
-            returnString = OriginalBlockMerge.Apply(returnSB.ToString(), OriginalBlockBodies);
+            returnString = OriginalBlockMerge.Apply(returnSB.ToString(), OriginalBlockBodies, OriginalBlockOrder, SiiNitems);
 
             return returnString;
         }

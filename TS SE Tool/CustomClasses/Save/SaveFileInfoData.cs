@@ -58,8 +58,12 @@ namespace TS_SE_Tool
         Dictionary<int, List<string>> unsortedDataDict = new Dictionary<int, List<string>>();
 
         //Methods
+        //Lines as read, so PrintOut can keep everything this class does not model.
+        private string[] OriginalLines;
+
         public void ProcessData(string[] _fileLines)
         {
+            OriginalLines = _fileLines;
             string currentLine = "";
             string tagLine = "", dataLine = "";
 
@@ -252,7 +256,7 @@ namespace TS_SE_Tool
             sbResult.AppendLine();
             sbResult.Append("}");
 
-            return sbResult.ToString();
+            return TS_SE_Tool.Save.Items.OriginalBlockMerge.ApplyToText(sbResult.ToString(), OriginalLines);
 
             //=== Help methods
 

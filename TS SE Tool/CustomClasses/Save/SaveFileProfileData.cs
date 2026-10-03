@@ -181,7 +181,7 @@ namespace TS_SE_Tool
         {
             get
             {
-                return (!string.IsNullOrEmpty(ud15_SomeUserData) ? "\"" + ud11_CurrentTruck + "\"" : "\"\"");
+                return (!string.IsNullOrEmpty(ud11_CurrentTruck) ? "\"" + ud11_CurrentTruck + "\"" : "\"\"");
             }
             set
             {
@@ -281,8 +281,12 @@ namespace TS_SE_Tool
             set { this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).SetValue(this, value, null); }
         }
 
+        //Lines as read, so PrintOut can keep everything this class does not model.
+        private string[] OriginalLines;
+
         public void ProcessData(string[] _fileLines)
         {
+            OriginalLines = _fileLines;
             string[] lineParts;
             string currentLine = "";
             string tagLine = "", dataLine = "";
@@ -582,7 +586,7 @@ namespace TS_SE_Tool
             sbResult.AppendLine();
             sbResult.Append("}");
 
-            return sbResult.ToString();
+            return TS_SE_Tool.Save.Items.OriginalBlockMerge.ApplyToText(sbResult.ToString(), OriginalLines);
 
             //=== Help methods
 

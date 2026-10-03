@@ -11,6 +11,10 @@ namespace TS_SE_Tool.Save.Items
     {
         internal List<string> UnidentifiedLines = new List<string>();
 
+        //Attributes whose value could not be parsed. The typed field keeps its default, so
+        //on write the original line must win - see OriginalBlockMerge.
+        internal HashSet<string> ParseFailedTags = new HashSet<string>();
+
         internal void removeWritenBlock(string _input)
         {
             TSSET_Help.fmRemoveWritenBlock(_input);

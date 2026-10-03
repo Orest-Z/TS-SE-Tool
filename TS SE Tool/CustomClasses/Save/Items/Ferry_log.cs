@@ -66,6 +66,7 @@ namespace TS_SE_Tool.Save.Items
                 }
                 catch (Exception ex)
                 {
+                    ParseFailedTags.Add(tagLine);
                     IO_Utilities.ErrorLogWriter(WriteErrorMsg(ex.Message, tagLine, dataLine));
                     continue;
                 }
