@@ -966,13 +966,13 @@ namespace TS_SE_Tool
             SelectedUserCompanyTruck.TruckMainData.transmission_wear = 0;
             SelectedUserCompanyTruck.TruckMainData.chassis_wear = 0;
             SelectedUserCompanyTruck.TruckMainData.cabin_wear = 0;
-            SelectedUserCompanyTruck.TruckMainData.wheels_wear = new List<Save.DataFormat.SCS_Float>();
+            SelectedUserCompanyTruck.TruckMainData.wheels_wear = SelectedUserCompanyTruck.TruckMainData.wheels_wear.Select(x => (Save.DataFormat.SCS_Float)0f).ToList(); //keep the wheel count, the game expects one entry per wheel (#140)
 
             SelectedUserCompanyTruck.TruckMainData.engine_wear_unfixable = 0;
             SelectedUserCompanyTruck.TruckMainData.transmission_wear_unfixable = 0;
             SelectedUserCompanyTruck.TruckMainData.chassis_wear_unfixable = 0;
             SelectedUserCompanyTruck.TruckMainData.cabin_wear_unfixable = 0;
-            SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable = new List<Save.DataFormat.SCS_Float>();
+            SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable = SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable.Select(x => (Save.DataFormat.SCS_Float)0f).ToList(); //keep the wheel count, the game expects one entry per wheel (#140)
 
             SelectedUserCompanyTruck.TruckMainData.integrity_odometer = 0;
             SelectedUserCompanyTruck.TruckMainData.integrity_odometer_float_part = 0;
@@ -1013,8 +1013,8 @@ namespace TS_SE_Tool
                     SelectedUserCompanyTruck.TruckMainData.cabin_wear_unfixable = 0;
                     break;
                 case 4:
-                    SelectedUserCompanyTruck.TruckMainData.wheels_wear = new List<Save.DataFormat.SCS_Float>();
-                    SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable = new List<Save.DataFormat.SCS_Float>();
+                    SelectedUserCompanyTruck.TruckMainData.wheels_wear = SelectedUserCompanyTruck.TruckMainData.wheels_wear.Select(x => (Save.DataFormat.SCS_Float)0f).ToList(); //keep the wheel count, the game expects one entry per wheel (#140)
+                    SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable = SelectedUserCompanyTruck.TruckMainData.wheels_wear_unfixable.Select(x => (Save.DataFormat.SCS_Float)0f).ToList(); //keep the wheel count, the game expects one entry per wheel (#140)
                     break;
             }
 
