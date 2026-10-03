@@ -886,22 +886,32 @@ namespace TS_SE_Tool
         {
             if (e.Error != null)
             {
+                //Writing already applied the staged edits to the in-memory save, so saving
+                //again would apply them twice. Require a reload instead.
+                toolStripProgressBarMain.Value = 0;
+                ClearFormControls(false);
                 ToggleMainControlsAccess(true);
-                ToggleControlsAccess(true);
+                ToggleControlsAccess(false);
 
                 string details = DescribeException(e.Error);
 
                 IO_Utilities.ErrorLogWriter("Error during Writing save file" + Environment.NewLine + details);
 
+                string state;
+
+                if (e.Error is Save.SafeSaveWriter.SwapException swap && swap.AlreadyReplaced.Count > 0)
+                    state = "Some files were already replaced: " + string.Join(", ", swap.AlreadyReplaced.Select(Path.GetFileName)) + "." + Environment.NewLine +
+                            "Restore them from the backup: " + Save.SafeSaveWriter.LastBackupFolder;
+                else
+                    state = "Your save files were NOT changed.";
+
                 string[] failedDialog = HelpTranslateDialogOrDefault("SaveWriteFailed",
                     "Error during Writing save file",
-                    "Something went wrong during Writing Save file." + Environment.NewLine +
-                    "The save file itself was NOT modified." + Environment.NewLine + Environment.NewLine +
-                    "{0}" + Environment.NewLine +
-                    "Full details were appended to errorlog.log");
+                    "Something went wrong while writing the save." + Environment.NewLine + "{0}" + Environment.NewLine + Environment.NewLine +
+                    "Please load the save again before making new changes.");
 
-                MessageBox.Show(string.Format(failedDialog[1], details), failedDialog[0],
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                FormErrorDetails.Show(this, failedDialog[0], string.Format(failedDialog[1], state),
+                                      details + Environment.NewLine + "Log: " + Path.Combine(Directory.GetCurrentDirectory(), "errorlog.log"));
 
                 return;
             }

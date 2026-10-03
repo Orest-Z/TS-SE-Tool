@@ -361,7 +361,7 @@ namespace TS_SE_Tool.Diagnostics
         }
 
         //================== decoding (same DLL as the app) ==================
-        private static unsafe string[] Decode(string path)
+        internal static unsafe string[] Decode(string path)
         {
             if (!File.Exists(path)) { Say("    missing file " + path); return null; }
 

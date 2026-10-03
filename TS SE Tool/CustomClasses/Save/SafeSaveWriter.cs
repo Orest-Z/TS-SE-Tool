@@ -43,6 +43,21 @@ namespace TS_SE_Tool.Save
             internal Func<string[], string> Validate;
         }
 
+        /// <summary>Thrown when a file could not be swapped in after others already were.</summary>
+        internal class SwapException : IOException
+        {
+            internal List<string> AlreadyReplaced;
+
+            internal SwapException(List<string> _replaced, string _failed, Exception _inner)
+                : base("Could not replace " + _failed + ": " + _inner.Message, _inner)
+            {
+                AlreadyReplaced = new List<string>(_replaced);
+            }
+        }
+
+        //Folder of the most recent backup, for messages
+        internal static string LastBackupFolder { get; private set; }
+
         internal static string BackupRoot
         {
             get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TS SE Tool", "backups"); }
@@ -84,6 +99,8 @@ namespace TS_SE_Tool.Save
 
             IO_Utilities.LogWriter("Backup written to " + unique);
 
+            LastBackupFolder = unique;
+
             return unique;
         }
 
@@ -121,14 +138,25 @@ namespace TS_SE_Tool.Save
                 }
 
                 //2. swap them in
+                List<string> replaced = new List<string>();
+
                 foreach (PendingFile file in _files)
                 {
                     string temp = file.Path + TempSuffix;
 
-                    if (File.Exists(file.Path))
-                        File.Replace(temp, file.Path, null, true);
-                    else
-                        File.Move(temp, file.Path);
+                    try
+                    {
+                        if (File.Exists(file.Path))
+                            File.Replace(temp, file.Path, null, true);
+                        else
+                            File.Move(temp, file.Path);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new SwapException(replaced, file.Path, ex);
+                    }
+
+                    replaced.Add(file.Path);
                 }
             }
             finally

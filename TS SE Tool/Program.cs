@@ -42,6 +42,13 @@ namespace TS_SE_Tool
                 return;
             }
 
+            // Edit-operation regression tests - see CustomClasses\Diagnostics\EditTests.cs
+            if (cmdArgs.Length > 0 && cmdArgs[0] == "--edittest")
+            {
+                Environment.ExitCode = Diagnostics.EditTests.Run(cmdArgs);
+                return;
+            }
+
             // Add the event handler for handling UI thread exceptions to the event
             Application.ThreadException += new ThreadExceptionEventHandler(UIThreadException);
 
