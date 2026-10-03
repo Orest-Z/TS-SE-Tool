@@ -37,7 +37,23 @@ Short orientation for future work sessions. Based on `upstream/dev-branch` (4402
 - Each player's freight market is generated locally. In Convoy, a job one player has taken can be taken by the others from the pause menu. The job definition travels from the player who took it. So in principle only that player's save needs the custom jobs.
 - The "missing DLC required for this job" message also appears for **jobs from other third-party editors** (Virtual Speeditor, Steam thread 5154944131325371202). The game also shows it for missing skills (ADR, high value, …) and for routes into regions you don't own. #113 is therefore most likely caused by the content of the generated job (cargo/trailer/company_truck combination, `trailer_place`, distance or other fields), not by real DLC differences. This needs to be confirmed by experiment.
 
-## Known risks / bugs (dev-branch)
+## Write path now (feature/ets2-1.61)
+
+`NewWrireSaveFile` runs `Prepare*Write()`, then `SiiNunit.PrintOut` builds the text by graph walk. `OriginalBlockMerge.Apply` then merges that text onto the units as read (`OriginalBlockBodies`, `OriginalBlockOrder`):
+- units are kept in their original order;
+- a scalar is replaced only if its value changed semantically;
+- arrays are replaced as a whole group;
+- `ParseFailedTags` keep the original line;
+- invented attributes are dropped.
+
+profile.sii and info.sii use `ApplyToText`. Then `SafeSaveWriter` does the backup, verified temp files and `File.Replace`. After a failed write the UI forces a reload, because Prepare* already mutated the model. Headless checks: `--selftest`, `--edittest`, `--writetest` (see README).
+
+Gotchas found while testing:
+- skills are written from `Economy._playerSkills`. `PrintOut` copies the array back over `adr`…`mechanical`.
+- repair used to empty `wheels_wear` arrays (#140).
+- `user_data[11]` was tied to `ud15`.
+
+## Known risks / bugs (dev-branch, most fixed above)
 
 - **Write truncates game.sii before the content exists**: a `StreamWriter` is opened on the target, then `PrintOut` throws, leaving a 0-byte save (#148).
 - **Lossy round-trip**: the fixed field lists drop new attributes (`player.my_vehicles`, `vehicle_addon_accessory.paint_color` → #142, cargo-related fields → likely #140) and invent removed ones. The `UnidentifiedLines` return value is discarded and stores values without keys (#147).
