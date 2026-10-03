@@ -69,7 +69,12 @@ namespace TS_SE_Tool.Save
         /// </summary>
         internal static string Backup(string _game, string _profileFolder, string _saveFolder, IEnumerable<string> _files)
         {
-            string folder = System.IO.Path.Combine(BackupRoot,
+            return BackupTo(BackupRoot, _game, _profileFolder, _saveFolder, _files);
+        }
+
+        internal static string BackupTo(string _root, string _game, string _profileFolder, string _saveFolder, IEnumerable<string> _files)
+        {
+            string folder = System.IO.Path.Combine(_root,
                                                    SafeName(_game),
                                                    SafeName(System.IO.Path.GetFileName(_profileFolder.TrimEnd('\\', '/'))),
                                                    SafeName(System.IO.Path.GetFileName(_saveFolder.TrimEnd('\\', '/'))),
@@ -110,6 +115,14 @@ namespace TS_SE_Tool.Save
 
             try
             {
+                //0. every target must be replaceable, otherwise nothing is touched
+                foreach (PendingFile file in _files)
+                {
+                    if (File.Exists(file.Path) && (File.GetAttributes(file.Path) & FileAttributes.ReadOnly) != 0)
+                        throw new UnauthorizedAccessException(System.IO.Path.GetFileName(file.Path) + " is read-only (" + file.Path + "). " +
+                                                              "Remove the read-only flag in the file's properties and save again.");
+                }
+
                 //1. write and verify every temp file
                 foreach (PendingFile file in _files)
                 {

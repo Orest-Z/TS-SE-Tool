@@ -49,6 +49,13 @@ namespace TS_SE_Tool
                 return;
             }
 
+            // Full write path into a copy of a save - see CustomClasses\Diagnostics\WriteTest.cs
+            if (cmdArgs.Length > 0 && cmdArgs[0] == "--writetest")
+            {
+                Environment.ExitCode = Diagnostics.WriteTest.Run(cmdArgs);
+                return;
+            }
+
             // Add the event handler for handling UI thread exceptions to the event
             Application.ThreadException += new ThreadExceptionEventHandler(UIThreadException);
 
