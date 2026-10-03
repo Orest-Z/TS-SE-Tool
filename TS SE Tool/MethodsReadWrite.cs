@@ -853,12 +853,14 @@ namespace TS_SE_Tool
                 return;
             }
 
-            if (SiiNunitData.UnidentifiedBlocks.Count > 0)
+            //Unknown units are kept unchanged on write, so only types no tested game version
+            //writes are worth mentioning (#144).
+            if (SiiNunitData.UnexpectedBlockTypes.Count > 0)
             {
-                MessageBox.Show("Some of the blocks in save file was not recognized and it may affect Program behavior." + Environment.NewLine + Environment.NewLine +
-                    "Please contact Developer via e-mail <" + Utilities.Web_Utilities.External.linkMailDeveloper + ">" + Environment.NewLine + Environment.NewLine +
-                    "Information can be found in error.log file.",
-                    "Unidentified blocks in save file", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("This save contains data types this version of the tool does not know:" + Environment.NewLine +
+                    string.Join(", ", SiiNunitData.UnexpectedBlockTypes.Distinct()) + Environment.NewLine + Environment.NewLine +
+                    "They will be kept unchanged when saving. Details are in errorlog.log.",
+                    "Unknown data in save file", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
             SiiNunitData.NamelessControlList.Sort();
@@ -1033,25 +1035,6 @@ namespace TS_SE_Tool
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Writes to a sibling temporary file first and only then swaps it in, so an
-        /// interrupted or failing write can never leave a truncated save behind.
-        /// </summary>
-        private static void WriteTextFileAtomic(string _path, string _content)
-        {
-            string tempPath = _path + ".tsset_tmp";
-
-            using (StreamWriter writer = new StreamWriter(tempPath, false))
-            {
-                writer.Write(_content);
-            }
-
-            if (File.Exists(_path))
-                File.Delete(_path);
-
-            File.Move(tempPath, _path);
-        }
-
         //button_save_file
         private void NewWrireSaveFile(object sender, DoWorkEventArgs e)
         {
@@ -1099,25 +1082,60 @@ namespace TS_SE_Tool
                 if (string.IsNullOrEmpty(saveText))
                     throw new InvalidOperationException("Serialised game.sii is empty - refusing to overwrite the save file.");
 
-                //Backup
-                string ProfileFolderPathBackup = Globals.SelectedProfilePath + "\\profile_backup.sii";
-                string SiiInfoPathBackup = Globals.SelectedSavePath + "\\info_backup.sii";
-                string SiiSavePathBackup = Globals.SelectedSavePath + "\\game_backup.sii";
+                //Backup - timestamped copy outside the game folder, plus the game-style *_backup.sii
+                Save.SafeSaveWriter.Backup(GameType, Globals.SelectedProfilePath, Globals.SelectedSavePath,
+                                           new string[] { ProfileFolderPath, SiiInfoPath, SiiSavePath });
 
-                File.Copy(ProfileFolderPath, ProfileFolderPathBackup, true);
-                File.Copy(SiiInfoPath, SiiInfoPathBackup, true);
-                File.Copy(SiiSavePath, SiiSavePathBackup, true);
+                File.Copy(ProfileFolderPath, Globals.SelectedProfilePath + "\\profile_backup.sii", true);
+                File.Copy(SiiInfoPath, Globals.SelectedSavePath + "\\info_backup.sii", true);
+                File.Copy(SiiSavePath, Globals.SelectedSavePath + "\\game_backup.sii", true);
 
-                //Write Profile data
+                //Write - every file goes through a verified temp file; nothing is replaced unless all pass
+                List<Save.SafeSaveWriter.PendingFile> pending = new List<Save.SafeSaveWriter.PendingFile>();
+
                 if (profileText != null)
-                    WriteTextFileAtomic(ProfileFolderPath, profileText);
+                    pending.Add(new Save.SafeSaveWriter.PendingFile
+                    {
+                        Path = ProfileFolderPath,
+                        Content = profileText,
+                        Validate = lines => Save.SafeSaveWriter.CheckSiiStructure(lines, -1)
+                    });
 
-                //Write Info data
                 if (infoText != null)
-                    WriteTextFileAtomic(SiiInfoPath, infoText);
+                    pending.Add(new Save.SafeSaveWriter.PendingFile
+                    {
+                        Path = SiiInfoPath,
+                        Content = infoText,
+                        Validate = lines => Save.SafeSaveWriter.CheckSiiStructure(lines, -1)
+                    });
 
-                //Write Save data
-                WriteTextFileAtomic(SiiSavePath, saveText);
+                int expectedUnits = Save.SafeSaveWriter.CountUnits(saveText);
+
+                pending.Add(new Save.SafeSaveWriter.PendingFile
+                {
+                    Path = SiiSavePath,
+                    Content = saveText,
+                    Validate = lines =>
+                    {
+                        string error = Save.SafeSaveWriter.CheckSiiStructure(lines, expectedUnits);
+
+                        if (error != null)
+                            return error;
+
+                        //Re-parse exactly like a load would
+                        Save.Items.SiiNunit reloaded = new Save.Items.SiiNunit(lines);
+
+                        if (reloaded.SiiNitems.Count != expectedUnits)
+                            return "re-parse found " + reloaded.SiiNitems.Count + " of " + expectedUnits + " units";
+
+                        if (string.IsNullOrEmpty(reloaded.EconomyNameless))
+                            return "economy unit missing after re-parse";
+
+                        return null;
+                    }
+                });
+
+                Save.SafeSaveWriter.WriteAll(pending);
 
                 UpdateStatusBarMessage.ShowStatusMessage(SMStatus.Info, "message_file_saved");                
             }
